@@ -6,7 +6,7 @@ import webbrowser
 from http.server import ThreadingHTTPServer
 from tkinter import BOTH, LEFT, Button, Frame, Label, Tk, messagebox
 
-from .web import Handler
+from doc_deduper.web import Handler
 
 
 def find_free_port() -> int:

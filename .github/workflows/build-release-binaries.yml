@@ -1,0 +1,208 @@
+name: build-release-binaries
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            python_arch: x64
+            build_msi: true
+          - arch: x86
+            python_arch: x86
+            build_msi: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          architecture: ${{ matrix.python_arch }}
+
+      - name: Resolve product version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag" -and "${{ github.ref_name }}" -match '^v(?<version>\d+\.\d+\.\d+)$') {
+            "PRODUCT_VERSION=$($Matches.version)" >> $env:GITHUB_ENV
+          } else {
+            "PRODUCT_VERSION=0.2.${{ github.run_number }}" >> $env:GITHUB_ENV
+          }
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pyinstaller
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Build Windows executable
+        shell: pwsh
+        run: |
+          python -m PyInstaller `
+            --noconfirm `
+            --clean `
+            --onefile `
+            --windowed `
+            --name DocumentDeduper `
+            --collect-all docx `
+            --collect-all pypdf `
+            src\doc_deduper\desktop.py
+          Copy-Item dist\DocumentDeduper.exe "dist\DocumentDeduper-windows-${{ matrix.arch }}.exe"
+
+      - uses: actions/setup-dotnet@v4
+        if: matrix.build_msi
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build Windows x64 MSI
+        if: matrix.build_msi
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          $sourceDir = Join-Path $PWD "dist"
+          $msiPath = Join-Path $PWD "dist\DocumentDeduper-$env:PRODUCT_VERSION-windows-x64.msi"
+          wix build installer\Product.wxs `
+            -d SourceDir="$sourceDir" `
+            -d ProductVersion="$env:PRODUCT_VERSION" `
+            -arch x64 `
+            -o "$msiPath"
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DocumentDeduper-windows-${{ matrix.arch }}
+          path: |
+            dist/DocumentDeduper-windows-${{ matrix.arch }}.exe
+            dist/*.msi
+
+      - name: Upload Windows assets to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          gh release view "$tag" --repo "${{ github.repository }}"
+          if ($LASTEXITCODE -ne 0) {
+            gh release create "$tag" --repo "${{ github.repository }}" --title "Document Deduper $tag" --notes "Cross-platform desktop builds for Document Deduper."
+          }
+          gh release upload "$tag" "dist\DocumentDeduper-windows-${{ matrix.arch }}.exe" --repo "${{ github.repository }}" --clobber
+          if ("${{ matrix.build_msi }}" -eq "true") {
+            gh release upload "$tag" "dist\DocumentDeduper-$env:PRODUCT_VERSION-windows-x64.msi" --repo "${{ github.repository }}" --clobber
+          }
+
+  build-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-13
+            arch: macos-intel
+          - runner: macos-14
+            arch: macos-apple-silicon
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pyinstaller
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Build macOS app
+        run: |
+          python -m PyInstaller \
+            --noconfirm \
+            --clean \
+            --windowed \
+            --name DocumentDeduper \
+            --collect-all docx \
+            --collect-all pypdf \
+            src/doc_deduper/desktop.py
+          ditto -c -k --sequesterRsrc --keepParent dist/DocumentDeduper.app "dist/DocumentDeduper-${{ matrix.arch }}.zip"
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DocumentDeduper-${{ matrix.arch }}
+          path: dist/DocumentDeduper-${{ matrix.arch }}.zip
+
+      - name: Upload macOS asset to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ github.ref_name }}"
+          gh release view "$tag" --repo "${{ github.repository }}" || \
+            gh release create "$tag" --repo "${{ github.repository }}" --title "Document Deduper $tag" --notes "Cross-platform desktop builds for Document Deduper."
+          gh release upload "$tag" "dist/DocumentDeduper-${{ matrix.arch }}.zip" --repo "${{ github.repository }}" --clobber
+
+  build-linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk tk-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pyinstaller
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Build Linux executable
+        run: |
+          python -m PyInstaller \
+            --noconfirm \
+            --clean \
+            --onefile \
+            --name DocumentDeduper \
+            --collect-all docx \
+            --collect-all pypdf \
+            src/doc_deduper/desktop.py
+          chmod +x dist/DocumentDeduper
+          tar -C dist -czf dist/DocumentDeduper-linux-x64.tar.gz DocumentDeduper
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DocumentDeduper-linux-x64
+          path: dist/DocumentDeduper-linux-x64.tar.gz
+
+      - name: Upload Linux asset to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ github.ref_name }}"
+          gh release view "$tag" --repo "${{ github.repository }}" || \
+            gh release create "$tag" --repo "${{ github.repository }}" --title "Document Deduper $tag" --notes "Cross-platform desktop builds for Document Deduper."
+          gh release upload "$tag" "dist/DocumentDeduper-linux-x64.tar.gz" --repo "${{ github.repository }}" --clobber

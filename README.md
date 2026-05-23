@@ -28,18 +28,27 @@ pip install -e .
 
 ## Windows Installer
 
-For non-Python users, download the latest Windows installer from:
+For non-Python users, download the latest packaged app from:
 
 [github.com/TargetMisser/document-deduper/releases/latest](https://github.com/TargetMisser/document-deduper/releases/latest)
 
-Install `DocumentDeduper-...-x64.msi`, then open **Document Deduper** from the desktop or Start menu.
+Available builds:
 
-The installed app opens a small desktop window and starts the local browser UI automatically.
+- Windows x64 installer: `DocumentDeduper-...-windows-x64.msi`
+- Windows x64 executable: `DocumentDeduper-windows-x64.exe`
+- Windows 32-bit executable: `DocumentDeduper-windows-x86.exe`
+- macOS Intel app: `DocumentDeduper-macos-intel.zip`
+- macOS Apple Silicon app: `DocumentDeduper-macos-apple-silicon.zip`
+- Linux x64 executable: `DocumentDeduper-linux-x64.tar.gz`
 
-Maintainers can build a fresh `.msi` from GitHub Actions:
+On Windows, install the MSI or run the `.exe`. On macOS, unzip the app and use control-click/Open if Gatekeeper warns about an unsigned app. On Linux, extract the tarball and run `./DocumentDeduper`.
+
+The packaged app opens a small desktop window and starts the local browser UI automatically.
+
+Maintainers can build fresh binaries from GitHub Actions:
 
 1. Open the repo's **Actions** tab.
-2. Run **build-windows-msi**.
+2. Run **build-release-binaries**.
 3. Download the generated artifact.
 
 ## Web UI
