@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "document-deduper"
+version = "0.1.0"
+description = "Merge DOCX/PDF document collections, remove duplicates, and export readable Word files with clickable summaries."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "TargetMisser" }]
+dependencies = [
+  "python-docx>=1.1.0",
+  "pypdf>=4.0.0",
+]
+
+[project.scripts]
+document-deduper = "doc_deduper.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
