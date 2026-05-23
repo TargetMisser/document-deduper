@@ -34,6 +34,8 @@ document-deduper web --host 127.0.0.1 --port 8765
 
 Then open [http://127.0.0.1:8765](http://127.0.0.1:8765), upload files, choose options, and download the ZIP.
 
+![Document Deduper web UI](docs/screenshots/web-ui.jpg)
+
 ## CLI
 
 ```bash
