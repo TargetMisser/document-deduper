@@ -9,8 +9,6 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    env:
-      PRODUCT_VERSION: 0.1.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
 
@@ -21,6 +19,15 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+
+      - name: Resolve product version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag" -and "${{ github.ref_name }}" -match '^v(?<version>\d+\.\d+\.\d+)$') {
+            "PRODUCT_VERSION=$($Matches.version)" >> $env:GITHUB_ENV
+          } else {
+            "PRODUCT_VERSION=0.1.${{ github.run_number }}" >> $env:GITHUB_ENV
+          }
 
       - name: Install Python dependencies
         run: |
