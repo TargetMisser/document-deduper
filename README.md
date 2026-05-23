@@ -26,6 +26,17 @@ source .venv/bin/activate
 pip install -e .
 ```
 
+## Windows Installer
+
+For non-Python users, the repository includes a GitHub Actions workflow that builds a Windows `.msi` installer.
+
+1. Open the repo's **Actions** tab.
+2. Run **build-windows-msi**.
+3. Download the generated artifact.
+4. Install `DocumentDeduper-...-x64.msi`.
+
+The installed app adds shortcuts for **Document Deduper**. Launching it opens a small desktop window and starts the local browser UI automatically.
+
 ## Web UI
 
 ```bash

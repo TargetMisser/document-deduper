@@ -1,0 +1,67 @@
+name: build-windows-msi
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      PRODUCT_VERSION: 0.1.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pyinstaller
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Build Windows executable
+        run: |
+          python -m PyInstaller `
+            --noconfirm `
+            --clean `
+            --onefile `
+            --windowed `
+            --name DocumentDeduper `
+            --collect-all docx `
+            --collect-all pypdf `
+            src\doc_deduper\desktop.py
+
+      - name: Install WiX Toolset
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          wix --version
+
+      - name: Build MSI
+        shell: pwsh
+        run: |
+          $sourceDir = Join-Path $PWD "dist"
+          $msiPath = Join-Path $PWD "dist\DocumentDeduper-$env:PRODUCT_VERSION-x64.msi"
+          wix build installer\Product.wxs `
+            -d SourceDir="$sourceDir" `
+            -d ProductVersion="$env:PRODUCT_VERSION" `
+            -arch x64 `
+            -o "$msiPath"
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DocumentDeduper-Windows-${{ env.PRODUCT_VERSION }}
+          path: |
+            dist/DocumentDeduper.exe
+            dist/*.msi

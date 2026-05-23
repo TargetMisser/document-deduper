@@ -1,0 +1,56 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="Document Deduper"
+    Manufacturer="TargetMisser"
+    Version="$(var.ProductVersion)"
+    UpgradeCode="{6B5DB095-55B2-4A98-98D2-F7B86EDB7A35}"
+    Scope="perUser">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Document Deduper is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="INSTALLFOLDER" Name="Document Deduper">
+        <Component Id="MainExecutable" Guid="{E5A16C1C-91BF-43D4-AF63-05D3F0E9F5B0}">
+          <File Id="DocumentDeduperExe" Source="$(var.SourceDir)\DocumentDeduper.exe" KeyPath="yes" />
+          <Shortcut
+            Id="StartMenuShortcut"
+            Directory="ApplicationProgramsFolder"
+            Name="Document Deduper"
+            Description="Merge DOCX/PDF files and remove duplicates"
+            WorkingDirectory="INSTALLFOLDER"
+            Advertise="yes" />
+          <Shortcut
+            Id="DesktopShortcut"
+            Directory="DesktopFolder"
+            Name="Document Deduper"
+            Description="Merge DOCX/PDF files and remove duplicates"
+            WorkingDirectory="INSTALLFOLDER"
+            Advertise="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="Document Deduper">
+        <Component Id="StartMenuCleanup" Guid="{1086444A-C74C-401E-9A4B-2F850C19035B}">
+          <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+          <RegistryValue
+            Root="HKCU"
+            Key="Software\TargetMisser\DocumentDeduper"
+            Name="installed"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Feature Id="MainFeature" Title="Document Deduper" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="StartMenuCleanup" />
+    </Feature>
+  </Package>
+</Wix>
